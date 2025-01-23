@@ -1,27 +1,24 @@
-name: Block High and Critical Dependabot PRs
+name: Dependabot Security Updates
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    branches: [main]  # Hangi branchlerde çalışacağını belirtin
 
 jobs:
-  block_high_severity:
+  security-updates:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Check if PR is a dependabot update and has high/critical labels
-        id: dependabot_check
+      - name: Dependabot
+        uses: dependabot/fetch-metadata@v1
+        with:
+          primary: security
+      - name: Check for security vulnerabilities
+        if: steps.dependabot.outputs.alerts > 0
         run: |
-          if [ "${GITHUB_ACTOR}" == 'dependabot[bot]' ]; then
-            for label in ${{ github.event.pull_request.labels.*.name }}; do
-              if [[ "${label}" == *"critical"* || "${label}" == *"high"* ]]; then
-                echo "::set-output name=is_high_severity::true"
-                break
-              fi
-            done
-          fi
-      - name: Block merge if high severity
-        if: steps.dependabot_check.outputs.is_high_severity == 'true'
-        run: |
-          echo "::error title=Blocking Pull Request::This pull request cannot be merged automatically due to its critical or high severity."
-          exit 1
+          for alert in ${{ steps.dependabot.outputs.alerts }}; do
+            if contains("${{ alert.title }}", "critical") || contains("${{ alert.title }}", "high"); then
+              echo "::error title=Security Vulnerability Found::A critical or high severity vulnerability has been found. Please address this issue before merging."
+              exit 1
+            fi
+          done
