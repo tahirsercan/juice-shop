@@ -1,30 +1,27 @@
-name: "Check Dependabot Alerts"
+name: Block High and Critical Dependabot PRs
 
 on:
   pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
-  push:
-    branches:
-      - main
+    types: [opened, synchronize]
 
 jobs:
-  check-dependabot-alerts:
+  block_high_severity:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Install jq
-      run: sudo apt-get install jq -y
-
-    - name: Get Dependabot Alerts
-      id: fetch-alerts
-      run: |
-        curl -H "Accept: application/vnd.github+json" \
-             -H "Authorization: Bearer ${{ secrets.GI
+      - uses: actions/checkout@v3
+      - name: Check if PR is a dependabot update and has high/critical labels
+        id: dependabot_check
+        run: |
+          if [ "${GITHUB_ACTOR}" == 'dependabot[bot]' ]; then
+            for label in ${{ github.event.pull_request.labels.*.name }}; do
+              if [[ "${label}" == *"critical"* || "${label}" == *"high"* ]]; then
+                echo "::set-output name=is_high_severity::true"
+                break
+              fi
+            done
+          fi
+      - name: Block merge if high severity
+        if: steps.dependabot_check.outputs.is_high_severity == 'true'
+        run: |
+          echo "::error title=Blocking Pull Request::This pull request cannot be merged automatically due to its critical or high severity."
+          exit 1
