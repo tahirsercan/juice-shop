@@ -1,0 +1,39 @@
+name: "Check Dependabot Alerts"
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-dependabot-alerts:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Get Dependabot Alerts
+      id: fetch-alerts
+      run: |
+        curl -H "Accept: application/vnd.github+json" \
+             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+             https://api.github.com/repos/${{ github.repository }}/dependabot/alerts > dependabot_alerts.json
+        cat dependabot_alerts.json
+
+    - name: Check for Critical and High Alerts
+      id: check-alerts
+      run: |
+        CRITICAL_COUNT=$(jq '[.[] | select(.security_advisory.severity == "critical")] | length' dependabot_alerts.json)
+        HIGH_COUNT=$(jq '[.[] | select(.security_advisory.severity == "high")] | length' dependabot_alerts.json)
+        echo "Critical Alerts: $CRITICAL_COUNT"
+        echo "High Alerts: $HIGH_COUNT"
+
+        if [ "$CRITICAL_COUNT" -gt 0 ] || [ "$HIGH_COUNT" -gt 0 ]; then
+          echo "There are critical or high severity alerts."
+          exit 1
+        fi
+
+    - name: Continue Pipeline
+      if: success()
+      run: echo "No critical or high alerts found. Proceeding with pipeline."
