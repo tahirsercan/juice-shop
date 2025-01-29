@@ -2,7 +2,7 @@ name: Dependabot Security Updates
 
 on:
   pull_request:
-    branches: [main]  # Hangi branchlerde çalışacağını belirtin
+    branches: [master]  # Hangi branchlerde çalışacağını belirtin
 
 jobs:
   security-updates:
