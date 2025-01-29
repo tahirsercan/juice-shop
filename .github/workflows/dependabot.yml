@@ -2,23 +2,32 @@ name: Dependabot Security Updates
 
 on:
   pull_request:
-    branches: [master]  # Hangi branchlerde çalışacağını belirtin
+    branches: [master]
 
 jobs:
   security-updates:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Dependabot
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Fetch Dependabot Metadata
+        id: dependabot
         uses: dependabot/fetch-metadata@v1
         with:
-          primary: security
-      - name: Check for security vulnerabilities
-        if: steps.dependabot.outputs.alerts > 0
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for Security Vulnerabilities
         run: |
-          for alert in ${{ steps.dependabot.outputs.alerts }}; do
-            if contains("${{ alert.title }}", "critical") || contains("${{ alert.title }}", "high"); then
-              echo "::error title=Security Vulnerability Found::A critical or high severity vulnerability has been found. Please address this issue before merging."
-              exit 1
-            fi
-          done
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts")
+
+          CRITICAL_COUNT=$(echo "$RESPONSE" | jq '[.[] | select(.security_vulnerability.severity == "critical")] | length')
+          HIGH_COUNT=$(echo "$RESPONSE" | jq '[.[] | select(.security_vulnerability.severity == "high")] | length')
+
+          if [[ "$CRITICAL_COUNT" -gt 0 || "$HIGH_COUNT" -gt 0 ]]; then
+            echo "::error title=Security Vulnerability Found::Found $CRITICAL_COUNT critical and $HIGH_COUNT high severity vulnerabilities. Please address before merging."
+            exit 1
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
