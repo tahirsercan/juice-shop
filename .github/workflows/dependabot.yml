@@ -2,10 +2,10 @@ name: 'Dependabot Critical/High Alert Check'
 on:
   push:
     branches:
-      - main  # İstediğiniz branch'leri buraya ekleyin
+      - master  # İstediğiniz branch'leri buraya ekleyin
   pull_request:
     branches:
-      - main  # PR'lar için kontrol edilecek branch'ler
+      - master  # PR'lar için kontrol edilecek branch'ler
 
 jobs:
   dependabot-critical-high-check:
