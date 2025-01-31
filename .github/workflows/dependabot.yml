@@ -2,10 +2,10 @@ name: 'Dependabot Critical/High Alert Check'
 on:
   push:
     branches:
-      - master  # İstediğiniz branch'leri buraya ekleyin
+      - master  # master branch'i için push olayı
   pull_request:
     branches:
-      - master  # PR'lar için kontrol edilecek branch'ler
+      - master  # master branch'i için PR olayı
 
 jobs:
   dependabot-critical-high-check:
@@ -15,12 +15,4 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@v3
 
-      - name: 'Fetch Dependabot Alerts'
-        id: fetch-alerts
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { data: alerts } = await github.rest.dependabot.listAlertsForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-             
+      - name: 'Fetch Dependabot A
