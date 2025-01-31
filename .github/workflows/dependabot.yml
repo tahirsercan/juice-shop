@@ -2,10 +2,10 @@ name: 'Dependabot Critical/High Alert Check'
 on:
   push:
     branches:
-      - master  # master branch'i için push olayı
+      - master
   pull_request:
     branches:
-      - master  # master branch'i için PR olayı
+      - master
 
 jobs:
   dependabot-critical-high-check:
@@ -20,13 +20,29 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const { data: alerts } = await github.rest.codeScanning.listAlertsForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              severity: 'critical,high'  // Yalnızca critical ve high uyarıları çek
-            });
-            return alerts;  // alerts dizisini döndür
+            const query = `
+              query {
+                repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+                  vulnerabilityAlerts(first: 100, states: OPEN) {
+                    nodes {
+                      securityAdvisory {
+                        severity
+                        summary
+                      }
+                      vulnerableManifestPath
+                      vulnerableRequirements
+                    }
+                  }
+                }
+              }
+            `;
+            const result = await github.graphql(query);
+            console.log("GraphQL Query Result:", JSON.stringify(result, null, 2));  // Debug için
+            const alerts = result.repository.vulnerabilityAlerts.nodes.filter(alert => 
+              alert.securityAdvisory.severity === 'CRITICAL' || alert.securityAdvisory.severity === 'HIGH'
+            );
+            console.log("Filtered Alerts:", JSON.stringify(alerts, null, 2));  // Debug için
+            return alerts;
 
       - name: 'Fail if Critical/High Alerts Exist'
         if: steps.fetch-alerts.outputs.result.length > 0
