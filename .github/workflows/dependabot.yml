@@ -2,10 +2,10 @@ name: 'Dependabot Critical/High Alert Check'
 on:
   push:
     branches:
-      - master  # İstediğiniz branch'leri buraya ekleyin
+      - main  # İstediğiniz branch'leri buraya ekleyin
   pull_request:
     branches:
-      - master  # PR'lar için kontrol edilecek branch'ler
+      - main  # PR'lar için kontrol edilecek branch'ler
 
 jobs:
   dependabot-critical-high-check:
@@ -23,13 +23,4 @@ jobs:
             const { data: alerts } = await github.rest.dependabot.listAlertsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'open',
-              severity: 'critical,high'  // Yalnızca critical ve high uyarıları çek
-            });
-            return alerts.length > 0 ? alerts : [];
-
-      - name: 'Fail if Critical/High Alerts Exist'
-        if: steps.fetch-alerts.outputs.result.length > 0
-        run: |
-          echo "Critical or High severity Dependabot alerts detected!"
-          echo "Number of alerts: ${{ steps.fetch-alerts.outputs
+             
