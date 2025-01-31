@@ -1,24 +1,35 @@
-name: Dependabot Security Updates
-
+name: 'Dependabot Critical/High Alert Check'
 on:
+  push:
+    branches:
+      - main  # İstediğiniz branch'leri buraya ekleyin
   pull_request:
-    branches: [master]  # Hangi branchlerde çalışacağını belirtin
+    branches:
+      - main  # PR'lar için kontrol edilecek branch'ler
 
 jobs:
-  security-updates:
+  dependabot-critical-high-check:
+    name: 'Critical/High Alert Check'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Dependabot
-        uses: dependabot/fetch-metadata@v1
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v3
+
+      - name: 'Fetch Dependabot Alerts'
+        id: fetch-alerts
+        uses: actions/github-script@v6
         with:
-          primary: security
-      - name: Check for security vulnerabilities
-        if: steps.dependabot.outputs.alerts > 0
+          script: |
+            const { data: alerts } = await github.rest.dependabot.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              severity: 'critical,high'  // Yalnızca critical ve high uyarıları çek
+            });
+            return alerts.length > 0 ? alerts : [];
+
+      - name: 'Fail if Critical/High Alerts Exist'
+        if: steps.fetch-alerts.outputs.result.length > 0
         run: |
-          for alert in ${{ steps.dependabot.outputs.alerts }}; do
-            if contains("${{ alert.title }}", "critical") || contains("${{ alert.title }}", "high"); then
-              echo "::error title=Security Vulnerability Found::A critical or high severity vulnerability has been found. Please address this issue before merging."
-              exit 1
-            fi
-          done
+          echo "Critical or High severity Dependabot alerts detected!"
+          echo "Number of alerts: ${{ steps.fetch-alerts.outputs
