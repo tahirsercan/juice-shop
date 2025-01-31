@@ -15,4 +15,22 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@v3
 
-      - name: 'Fetch Dependabot A
+      - name: 'Fetch Dependabot Alerts'
+        id: fetch-alerts
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: alerts } = await github.rest.dependabot.listAlertsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              severity: 'critical,high'  // Yalnızca critical ve high uyarıları çek
+            });
+            return alerts;  // alerts dizisini döndür
+
+      - name: 'Fail if Critical/High Alerts Exist'
+        if: steps.fetch-alerts.outputs.result.length > 0
+        run: |
+          echo "Critical or High severity Dependabot alerts detected!"
+          echo "Number of alerts: ${{ steps.fetch-alerts.outputs.result.length }}"
+          exit 1
