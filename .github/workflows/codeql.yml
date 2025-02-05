@@ -1,80 +1,38 @@
-name: "CodeQL Advanced"
+duplication-check:
+  name: Detect Code Duplication
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Tüm commit geçmişini çek
 
-on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-  schedule:
-    - cron: '0 0 */14 * *'
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
 
-jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
-    permissions:
-      security-events: write
-      packages: read
-      actions: read
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: javascript-typescript
-            build-mode: none
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Install jscpd
+      run: npm install -g jscpd
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v44
+      with:
+        since: ${{ github.event.pull_request.base.sha }}
+        until: ${{ github.event.pull_request.head.sha }}
 
-      - if: matrix.build-mode == 'manual'
-        shell: bash
-        run: |
-          echo "Replace this with actual build steps"
-          exit 1
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{matrix.language}}"
-
-  dependency-review:
-    if: github.event_name == 'pull_request'  # Dependency Review runs only on PRs
-    name: Dependency Review
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Run Dependency Review
-        uses: actions/dependency-review-action@v3
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: on-failure # Comment only on failure
-
-  detect-duplication:
-    name: Detect Code Duplication
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install jscpd
-        run: npm install -g jscpd
-
-      - name: Run jscpd
-        run: jscpd --min-tokens 50 --threshold 3.0 --reporters console
+    - name: Run jscpd on changed files
+      run: |
+        if [ -n "${{ steps.changed-files.outputs.all_changed_files }}" ]; then
+          echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+          jscpd \
+            --min-tokens 10 \  # Daha küçük kod bloklarını tespit et
+            --threshold 1 \    # %1 duplication threshold
+            --reporters console \
+            --ignore "**/generated/**" \  # İgnore edilecek dosyalar
+            --ignore-identifiers \  # Değişken isimlerini ignore et
+            ${{ steps.changed-files.outputs.all_changed_files }}
+        else
+          echo "No files changed. Skipping duplication check."
+        fi
