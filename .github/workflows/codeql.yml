@@ -61,7 +61,7 @@ jobs:
           fail-on-severity: high
           comment-summary-in-pr: on-failure # Sadece başarısız olursa yorum ekle
           
-- name: Detect code duplication
+  - name: Detect code duplication
   run: |
     # Install jscpd globally
     npm install -g jscpd
