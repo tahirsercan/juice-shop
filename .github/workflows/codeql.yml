@@ -21,8 +21,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - language: javascript-typescript
-          build-mode: none
+          - language: javascript-typescript
+            build-mode: none
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -45,7 +45,7 @@ jobs:
           category: "/language:${{matrix.language}}"
 
   dependency-review:
-    if: github.event_name == 'pull_request'  # Dependency Review sadece PR'de çalışacak
+    if: github.event_name == 'pull_request'  # Dependency Review runs only on PRs
     name: Dependency Review
     runs-on: ubuntu-latest
     permissions:
@@ -59,12 +59,22 @@ jobs:
         uses: actions/dependency-review-action@v3
         with:
           fail-on-severity: high
-          comment-summary-in-pr: on-failure # Sadece başarısız olursa yorum ekle
-          
-  - name: Detect code duplication
-  run: |
-    # Install jscpd globally
-    npm install -g jscpd
+          comment-summary-in-pr: on-failure # Comment only on failure
 
-    # Run jscpd with a 3.0% duplication threshold
-    jscpd --min-tokens 50 --threshold 3.0 --reporters console
+  detect-duplication:
+    name: Detect Code Duplication
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install jscpd
+        run: npm install -g jscpd
+
+      - name: Run jscpd
+        run: jscpd --min-tokens 50 --threshold 3.0 --reporters console
