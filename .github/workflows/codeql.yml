@@ -60,3 +60,11 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure # Sadece başarısız olursa yorum ekle
+          
+- name: Detect code duplication
+  run: |
+    # Install jscpd globally
+    npm install -g jscpd
+
+    # Run jscpd with a 3.0% duplication threshold
+    jscpd --min-tokens 50 --threshold 3.0 --reporters console
